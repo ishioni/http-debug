@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -31,22 +32,27 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		statusText = "Unknown Status Code"
 	}
 
-	log.Printf("Received request for %d: %s", statusCode, statusText)
-
-	// Write the header
-	w.WriteHeader(statusCode)
-
-	// Write the body
-	fmt.Fprintf(w, "%d %s\n", statusCode, statusText)
-
-	fmt.Fprintln(w, "\nHeaders:")
-	log.Println("Headers:")
-	for name, values := range r.Header {
-		for _, value := range values {
-			fmt.Fprintf(w, "%s: %s\n", name, value)
-			log.Printf("%s: %s", name, value)
-		}
+	data := struct {
+		StatusCode int         `json:"statusCode"`
+		StatusText string      `json:"statusText"`
+		Headers    http.Header `json:"headers"`
+	}{
+		StatusCode: statusCode,
+		StatusText: statusText,
+		Headers:    r.Header,
 	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("ERROR: could not marshal json: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("%s", jsonData)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	w.Write(jsonData)
 }
 
 func readyzHandler(w http.ResponseWriter, r *http.Request) {
