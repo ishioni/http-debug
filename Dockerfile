@@ -3,6 +3,19 @@ FROM golang:1.26 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
+# Build Arguments for OCI Labels
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VCS_URL
+ARG VERSION
+
+LABEL org.opencontainers.image.title="http-debug"
+LABEL org.opencontainers.image.description="A simple HTTP debug server"
+LABEL org.opencontainers.image.source="${VCS_URL}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.version="${VERSION}"
+
 WORKDIR /workspace
 
 # Copy the Go Modules manifests
