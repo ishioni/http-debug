@@ -50,9 +50,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("%s", jsonData)
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	w.Write(jsonData)
+	fmt.Fprintf(w, "Status Code: %d %s\n", statusCode, statusText)
+	fmt.Fprintln(w, "Headers:")
+	for key, values := range r.Header {
+		for _, value := range values {
+			fmt.Fprintf(w, "  %s: %s\n", key, value)
+		}
+	}
 }
 
 func readyzHandler(w http.ResponseWriter, r *http.Request) {
