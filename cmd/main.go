@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -36,10 +38,12 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		StatusCode int         `json:"statusCode"`
 		StatusText string      `json:"statusText"`
 		Headers    http.Header `json:"headers"`
+		ClientIP   string      `json:"clientIP"`
 	}{
 		StatusCode: statusCode,
 		StatusText: statusText,
 		Headers:    r.Header,
+		ClientIP:   getClientIP(r),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -52,9 +56,16 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s", jsonData)
 	w.WriteHeader(statusCode)
 	fmt.Fprintf(w, "Status Code: %d %s\n", statusCode, statusText)
+	fmt.Fprintf(w, "Client IP: %s\n", getClientIP(r))
 	fmt.Fprintln(w, "Headers:")
-	for key, values := range r.Header {
-		for _, value := range values {
+	fmt.Fprintf(w, "  Host: %s\n", r.Host)
+	keys := make([]string, 0, len(r.Header))
+	for key := range r.Header {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		for _, value := range r.Header[key] {
 			fmt.Fprintf(w, "  %s: %s\n", key, value)
 		}
 	}
@@ -63,6 +74,19 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func readyzHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, "OK")
+}
+
+func getClientIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		return strings.TrimSpace(parts[0])
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
 }
 
 func main() {
